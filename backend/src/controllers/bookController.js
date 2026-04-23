@@ -9,6 +9,15 @@ export async function getBooks(req, res, next) {
   }
 }
 
+export async function getBook(req, res, next) {
+  try {
+    const book = await bookService.getBook(Number(req.params.id));
+    res.json(book);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function createBook(req, res, next) {
   try {
     const book = await bookService.addBook(req.body);

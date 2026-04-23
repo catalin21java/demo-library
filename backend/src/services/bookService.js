@@ -27,6 +27,16 @@ export async function listBooks() {
   return bookRepository.getAllBooks();
 }
 
+export async function getBook(id) {
+  const book = await bookRepository.getBookById(id);
+  if (!book) {
+    const error = new Error("Book not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+  return book;
+}
+
 export async function addBook(payload) {
   const book = {
     title: normalizeText(payload.title, "Title"),
