@@ -134,9 +134,24 @@ function BookDetailsPage() {
   const queryClient = useQueryClient();
   const [editForm, setEditForm] = useState({ title: "", author: "", publishedYear: "" });
   const [isEditing, setIsEditing] = useState(false);
+  const booksListCache = queryClient.getQueryData(["books"]);
+  const booksListUpdatedAt = queryClient.getQueryState(["books"])?.dataUpdatedAt;
   const bookQuery = useQuery({
     queryKey: ["book", id],
     queryFn: () => fetchBookById(id),
+    initialData: () => {
+      const cachedBook = queryClient.getQueryData(["book", id]);
+      if (cachedBook) {
+        return cachedBook;
+      }
+
+      if (!Array.isArray(booksListCache)) {
+        return undefined;
+      }
+
+      return booksListCache.find((currentBook) => String(currentBook.id) === id);
+    },
+    initialDataUpdatedAt: booksListUpdatedAt,
   });
   const book = bookQuery.data;
 
