@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import "./App.css";
 
@@ -26,16 +25,127 @@ async function fetchBookById(id) {
   return response.json();
 }
 
-function BooksListPage() {
-  const [form, setForm] = useState({ title: "", author: "", publishedYear: "" });
-  const queryClient = useQueryClient();
-  const booksQuery = useQuery({
-    queryKey: ["books"],
-    queryFn: fetchBooks,
-  });
+const BooksCacheContext = createContext(null);
 
-  const createBookMutation = useMutation({
-    mutationFn: async (newBook) => {
+function BooksCacheProvider({ children }) {
+  const [books, setBooks] = useState([]);
+  const [hasLoadedBooks, setHasLoadedBooks] = useState(false);
+  const [booksLoading, setBooksLoading] = useState(false);
+  const [booksError, setBooksError] = useState("");
+  const [bookById, setBookById] = useState({});
+  const [bookStatesById, setBookStatesById] = useState({});
+
+  const upsertBook = useCallback((book) => {
+    const normalizedId = String(book.id);
+    setBookById((current) => ({ ...current, [normalizedId]: book }));
+    setBookStatesById((current) => ({
+      ...current,
+      [normalizedId]: {
+        hasLoaded: true,
+        isLoading: false,
+        isRefreshing: false,
+        error: "",
+      },
+    }));
+  }, []);
+
+  const loadBooks = useCallback(async () => {
+    if (booksLoading || hasLoadedBooks) {
+      return;
+    }
+
+    setBooksLoading(true);
+    setBooksError("");
+    try {
+      const data = await fetchBooks();
+      setBooks(data);
+      setHasLoadedBooks(true);
+      setBookById((current) => {
+        const next = { ...current };
+        data.forEach((book) => {
+          next[String(book.id)] = book;
+        });
+        return next;
+      });
+      setBookStatesById((current) => {
+        const next = { ...current };
+        data.forEach((book) => {
+          next[String(book.id)] = {
+            hasLoaded: true,
+            isLoading: false,
+            isRefreshing: false,
+            error: "",
+          };
+        });
+        return next;
+      });
+    } catch (error) {
+      setBooksError(error.message || "Failed to load books.");
+    } finally {
+      setBooksLoading(false);
+    }
+  }, [booksLoading, hasLoadedBooks]);
+
+  const loadBookById = useCallback(
+    async (id) => {
+      const normalizedId = String(id);
+      const currentState = bookStatesById[normalizedId];
+      const alreadyLoaded = currentState?.hasLoaded;
+      const currentlyBusy = currentState?.isLoading || currentState?.isRefreshing;
+
+      if (alreadyLoaded || currentlyBusy) {
+        return;
+      }
+
+      setBookStatesById((current) => ({
+        ...current,
+        [normalizedId]: {
+          hasLoaded: false,
+          isLoading: true,
+          isRefreshing: false,
+          error: "",
+        },
+      }));
+
+      try {
+        const book = await fetchBookById(normalizedId);
+        setBookById((current) => ({ ...current, [normalizedId]: book }));
+        setBookStatesById((current) => ({
+          ...current,
+          [normalizedId]: {
+            hasLoaded: true,
+            isLoading: false,
+            isRefreshing: false,
+            error: "",
+          },
+        }));
+        setBooks((currentBooks) => {
+          const exists = currentBooks.some((currentBook) => String(currentBook.id) === normalizedId);
+          if (!exists) {
+            return currentBooks;
+          }
+          return currentBooks.map((currentBook) =>
+            String(currentBook.id) === normalizedId ? book : currentBook,
+          );
+        });
+      } catch (error) {
+        setBookStatesById((current) => ({
+          ...current,
+          [normalizedId]: {
+            hasLoaded: false,
+            isLoading: false,
+            isRefreshing: false,
+            error: error.message || "Failed to load book.",
+            status: error.status,
+          },
+        }));
+      }
+    },
+    [bookStatesById],
+  );
+
+  const createBook = useCallback(
+    async (newBook) => {
       const response = await fetch(`${apiBaseUrl}/books`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,29 +157,137 @@ function BooksListPage() {
         throw new Error(apiError.message || "Failed to create book.");
       }
 
-      return response.json();
+      const createdBook = await response.json();
+      setBooks((currentBooks) => [...currentBooks, createdBook]);
+      setHasLoadedBooks(true);
+      upsertBook(createdBook);
+      return createdBook;
     },
-    onSuccess: (createdBook) => {
-      queryClient.setQueryData(["books"], (currentBooks = []) => [...currentBooks, createdBook]);
-      queryClient.setQueryData(["book", String(createdBook.id)], createdBook);
-      setForm({ title: "", author: "", publishedYear: "" });
+    [upsertBook],
+  );
+
+  const updateBook = useCallback(
+    async (id, payload) => {
+      const normalizedId = String(id);
+      const response = await fetch(`${apiBaseUrl}/books/${normalizedId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const apiError = await response.json();
+        throw new Error(apiError.message || "Failed to update book.");
+      }
+
+      const updatedBook = await response.json();
+      setBooks((currentBooks) =>
+        currentBooks.map((currentBook) =>
+          String(currentBook.id) === normalizedId ? updatedBook : currentBook,
+        ),
+      );
+      upsertBook(updatedBook);
+      return updatedBook;
     },
-  });
+    [upsertBook],
+  );
+
+  const removeBook = useCallback(async (id) => {
+    const normalizedId = String(id);
+    const response = await fetch(`${apiBaseUrl}/books/${normalizedId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const apiError = await response.json();
+      throw new Error(apiError.message || "Failed to delete book.");
+    }
+
+    setBooks((currentBooks) =>
+      currentBooks.filter((currentBook) => String(currentBook.id) !== normalizedId),
+    );
+    setBookById((current) => {
+      const next = { ...current };
+      delete next[normalizedId];
+      return next;
+    });
+    setBookStatesById((current) => {
+      const next = { ...current };
+      delete next[normalizedId];
+      return next;
+    });
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      books,
+      booksLoading,
+      booksError,
+      hasLoadedBooks,
+      bookById,
+      bookStatesById,
+      loadBooks,
+      loadBookById,
+      createBook,
+      updateBook,
+      removeBook,
+    }),
+    [
+      bookById,
+      bookStatesById,
+      books,
+      booksError,
+      booksLoading,
+      createBook,
+      hasLoadedBooks,
+      loadBookById,
+      loadBooks,
+      removeBook,
+      updateBook,
+    ],
+  );
+
+  return <BooksCacheContext.Provider value={value}>{children}</BooksCacheContext.Provider>;
+}
+
+function useBooksCache() {
+  const context = useContext(BooksCacheContext);
+  if (!context) {
+    throw new Error("useBooksCache must be used within BooksCacheProvider.");
+  }
+  return context;
+}
+
+function BooksListPage() {
+  const [form, setForm] = useState({ title: "", author: "", publishedYear: "" });
+  const [createError, setCreateError] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const { books, booksError, booksLoading, loadBooks, createBook } = useBooksCache();
+
+  useEffect(() => {
+    loadBooks();
+  }, [loadBooks]);
 
   async function handleSubmit(event) {
     event.preventDefault();
-    createBookMutation.reset();
-    await createBookMutation.mutateAsync(form);
+    setCreateError("");
+    setIsCreating(true);
+    try {
+      await createBook(form);
+      setForm({ title: "", author: "", publishedYear: "" });
+    } catch (error) {
+      setCreateError(error.message || "Failed to create book.");
+    } finally {
+      setIsCreating(false);
+    }
   }
 
-  const books = booksQuery.data ?? [];
-  const error = booksQuery.error?.message || createBookMutation.error?.message || "";
-  const loading = booksQuery.isPending;
+  const error = booksError || createError || "";
+  const loading = booksLoading;
 
   return (
     <main className="app">
       <h1>Books</h1>
-  
 
       <form className="task-form" onSubmit={handleSubmit}>
         <input
@@ -89,13 +307,13 @@ function BooksListPage() {
           }
           placeholder="Published year"
         />
-        <button type="submit">Create</button>
+        <button type="submit" disabled={isCreating}>
+          {isCreating ? "Creating..." : "Create"}
+        </button>
       </form>
 
       {error ? <p className="error">{error}</p> : null}
       {loading ? <p>Loading books...</p> : null}
-      {booksQuery.isFetching && !loading ? <p>Refreshing books...</p> : null}
-
       {!loading ? (
         <table className="book-table">
           <thead>
@@ -131,100 +349,61 @@ function BooksListPage() {
 function BookDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [editForm, setEditForm] = useState({ title: "", author: "", publishedYear: "" });
   const [isEditing, setIsEditing] = useState(false);
-  const booksListCache = queryClient.getQueryData(["books"]);
-  const booksListUpdatedAt = queryClient.getQueryState(["books"])?.dataUpdatedAt;
-  const bookQuery = useQuery({
-    queryKey: ["book", id],
-    queryFn: () => fetchBookById(id),
-    initialData: () => {
-      const cachedBook = queryClient.getQueryData(["book", id]);
-      if (cachedBook) {
-        return cachedBook;
-      }
+  const [saveError, setSaveError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { books, bookById, bookStatesById, loadBookById, updateBook, removeBook } = useBooksCache();
 
-      if (!Array.isArray(booksListCache)) {
-        return undefined;
-      }
+  const fallbackBook = books.find((currentBook) => String(currentBook.id) === id);
+  const book = bookById[id] ?? fallbackBook;
+  const bookState = bookStatesById[id] || {};
 
-      return booksListCache.find((currentBook) => String(currentBook.id) === id);
-    },
-    initialDataUpdatedAt: booksListUpdatedAt,
-  });
-  const book = bookQuery.data;
+  useEffect(() => {
+    loadBookById(id);
+  }, [id, loadBookById]);
 
-  const saveEditMutation = useMutation({
-    mutationFn: async (payload) => {
-      const response = await fetch(`${apiBaseUrl}/books/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const apiError = await response.json();
-        throw new Error(apiError.message || "Failed to update book.");
-      }
-
-      return response.json();
-    },
-    onSuccess: (updatedBook) => {
-      queryClient.setQueryData(["book", id], updatedBook);
-      queryClient.setQueryData(["books"], (currentBooks = []) =>
-        currentBooks.map((currentBook) =>
-          currentBook.id === updatedBook.id ? updatedBook : currentBook,
-        ),
-      );
+  async function saveEdit() {
+    setSaveError("");
+    setIsSaving(true);
+    try {
+      const updatedBook = await updateBook(id, editForm);
       setEditForm({
         title: updatedBook.title,
         author: updatedBook.author,
         publishedYear: updatedBook.publishedYear ?? "",
       });
       setIsEditing(false);
-    },
-  });
-
-  async function saveEdit() {
-    saveEditMutation.reset();
-    await saveEditMutation.mutateAsync(editForm);
+    } catch (error) {
+      setSaveError(error.message || "Failed to update book.");
+    } finally {
+      setIsSaving(false);
+    }
   }
-
-  const deleteBookMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`${apiBaseUrl}/books/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const apiError = await response.json();
-        throw new Error(apiError.message || "Failed to delete book.");
-      }
-    },
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ["book", id] });
-      queryClient.setQueryData(["books"], (currentBooks = []) =>
-        currentBooks.filter((currentBook) => String(currentBook.id) !== id),
-      );
-      navigate("/books");
-    },
-  });
 
   async function deleteBook() {
-    deleteBookMutation.reset();
-    await deleteBookMutation.mutateAsync();
+    setDeleteError("");
+    setIsDeleting(true);
+    try {
+      await removeBook(id);
+      navigate("/books");
+    } catch (error) {
+      setDeleteError(error.message || "Failed to delete book.");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
-  const loading = bookQuery.isPending;
-  const notFound = bookQuery.error?.status === 404;
+  const loading = bookState.isLoading || (!bookState.hasLoaded && !book);
+  const notFound = bookState.status === 404;
   const error = useMemo(() => {
-    return (
-      saveEditMutation.error?.message ||
-      deleteBookMutation.error?.message ||
-      (bookQuery.error && !notFound ? bookQuery.error.message : "")
-    );
-  }, [bookQuery.error, deleteBookMutation.error, notFound, saveEditMutation.error]);
+    if (saveError) return saveError;
+    if (deleteError) return deleteError;
+    if (notFound) return "";
+    return bookState.error || "";
+  }, [bookState.error, deleteError, notFound, saveError]);
 
   if (loading) {
     return (
@@ -261,7 +440,7 @@ function BookDetailsPage() {
         <Link to="/books">Back to books</Link>
       </p>
       {error ? <p className="error">{error}</p> : null}
-      {bookQuery.isFetching && !loading ? <p>Refreshing book...</p> : null}
+      {bookState.isRefreshing && !loading ? <p>Refreshing book...</p> : null}
       <section className="detail-card">
         <label>
           Title
@@ -295,8 +474,8 @@ function BookDetailsPage() {
         <div className="actions">
           {isEditing ? (
             <>
-              <button type="button" onClick={saveEdit}>
-                Save
+              <button type="button" onClick={saveEdit} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save"}
               </button>
               <button
                 type="button"
@@ -327,8 +506,8 @@ function BookDetailsPage() {
               >
                 Edit
               </button>
-              <button type="button" onClick={deleteBook}>
-                Delete
+              <button type="button" onClick={deleteBook} disabled={isDeleting}>
+                {isDeleting ? "Deleting..." : "Delete"}
               </button>
             </>
           )}
@@ -340,12 +519,14 @@ function BookDetailsPage() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/books" replace />} />
-      <Route path="/books" element={<BooksListPage />} />
-      <Route path="/books/:id" element={<BookDetailsPage />} />
-      <Route path="*" element={<Navigate to="/books" replace />} />
-    </Routes>
+    <BooksCacheProvider>
+      <Routes>
+        <Route path="/" element={<Navigate to="/books" replace />} />
+        <Route path="/books" element={<BooksListPage />} />
+        <Route path="/books/:id" element={<BookDetailsPage />} />
+        <Route path="*" element={<Navigate to="/books" replace />} />
+      </Routes>
+    </BooksCacheProvider>
   );
 }
 
