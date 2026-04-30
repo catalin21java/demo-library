@@ -5,7 +5,7 @@ import "./App.css";
 const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
 async function fetchBooks() {
-  const response = await fetch(`${apiBaseUrl}/books`);
+  const response = await fetch(`${apiBaseUrl}/books`); // books?includeCreatedAt=true
   if (!response.ok) {
     throw new Error("Failed to load books.");
   }

@@ -2,7 +2,9 @@ import * as bookService from "../services/bookService.js";
 
 export async function getBooks(req, res, next) {
   try {
-    const books = await bookService.listBooks();
+    const books = await bookService.listBooks({
+      includeCreatedAt: String(req.query.includeCreatedAt).toLowerCase() === "true",
+    });
     res.json(books);
   } catch (error) {
     next(error);
