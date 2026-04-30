@@ -258,11 +258,74 @@ function useBooksCache() {
   return context;
 }
 
+function compareBooksForSort(bookA, bookB, column, direction) {
+  const invert = direction === "desc" ? -1 : 1;
+  if (column === "id") {
+    const idA = Number(bookA.id);
+    const idB = Number(bookB.id);
+    if (idA !== idB) {
+      return idA < idB ? -invert : invert;
+    }
+    return 0;
+  }
+  const valueA = bookA[column] == null ? "" : String(bookA[column]);
+  const valueB = bookB[column] == null ? "" : String(bookB[column]);
+  return valueA.localeCompare(valueB, undefined, { sensitivity: "base" }) * invert;
+}
+
+const BOOKS_PAGE_SIZE = 10;
+
 function BooksListPage() {
   const [form, setForm] = useState({ title: "", author: "", publishedYear: "" });
   const [createError, setCreateError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [sort, setSort] = useState({ column: "id", direction: "asc" });
+  const [pageIndex, setPageIndex] = useState(0);
   const { books, booksError, booksLoading, loadBooks, createBook } = useBooksCache();
+
+  const sortedBooks = useMemo(() => {
+    const nextBooks = [...books];
+    nextBooks.sort((bookA, bookB) =>
+      compareBooksForSort(bookA, bookB, sort.column, sort.direction),
+    );
+    return nextBooks;
+  }, [books, sort]);
+
+  const totalBooks = sortedBooks.length;
+  const totalPages = totalBooks === 0 ? 0 : Math.ceil(totalBooks / BOOKS_PAGE_SIZE);
+
+  useEffect(() => {
+    if (totalPages === 0) {
+      setPageIndex(0);
+      return;
+    }
+    setPageIndex((current) => Math.min(current, totalPages - 1));
+  }, [totalPages]);
+
+  const safePageIndex = totalPages === 0 ? 0 : Math.min(pageIndex, totalPages - 1);
+
+  const paginatedBooks = useMemo(() => {
+    const start = safePageIndex * BOOKS_PAGE_SIZE;
+    return sortedBooks.slice(start, start + BOOKS_PAGE_SIZE);
+  }, [sortedBooks, safePageIndex]);
+
+  const rangeStart = totalBooks === 0 ? 0 : safePageIndex * BOOKS_PAGE_SIZE + 1;
+  const rangeEnd = totalBooks === 0 ? 0 : Math.min(totalBooks, safePageIndex * BOOKS_PAGE_SIZE + BOOKS_PAGE_SIZE);
+
+  function handleSort(column) {
+    setSort((current) =>
+      current.column === column
+        ? { column, direction: current.direction === "asc" ? "desc" : "asc" }
+        : { column, direction: "asc" },
+    );
+  }
+
+  function sortLabel(column) {
+    if (sort.column !== column) {
+      return "";
+    }
+    return sort.direction === "asc" ? " ▲" : " ▼";
+  }
 
   useEffect(() => {
     loadBooks();
@@ -318,14 +381,42 @@ function BooksListPage() {
         <table className="book-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Author</th>
-              <th>Actions</th>
+              <th
+                className="th-sortable"
+                aria-sort={sort.column === "id" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+              >
+                <button type="button" className="sort-btn" onClick={() => handleSort("id")}>
+                  ID
+                  <span aria-hidden>{sortLabel("id")}</span>
+                </button>
+              </th>
+              <th
+                className="th-sortable"
+                aria-sort={
+                  sort.column === "title" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"
+                }
+              >
+                <button type="button" className="sort-btn" onClick={() => handleSort("title")}>
+                  Title
+                  <span aria-hidden>{sortLabel("title")}</span>
+                </button>
+              </th>
+              <th
+                className="th-sortable"
+                aria-sort={
+                  sort.column === "author" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"
+                }
+              >
+                <button type="button" className="sort-btn" onClick={() => handleSort("author")}>
+                  Author
+                  <span aria-hidden>{sortLabel("author")}</span>
+                </button>
+              </th>
+              <th className="th-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {books.map((book) => {
+            {paginatedBooks.map((book) => {
               return (
                 <tr key={book.id}>
                   <td>{book.id}</td>
@@ -341,6 +432,34 @@ function BooksListPage() {
             })}
           </tbody>
         </table>
+      ) : null}
+      {!loading && totalBooks > 0 ? (
+        <nav className="pagination" aria-label="Book list pages">
+          <p className="pagination-summary">
+            Showing {rangeStart}–{rangeEnd} of {totalBooks}
+            {totalPages > 1 ? ` · Page ${safePageIndex + 1} of ${totalPages}` : null}
+          </p>
+          {totalPages > 1 ? (
+            <div className="pagination-actions">
+              <button
+                type="button"
+                className="pagination-btn"
+                onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
+                disabled={safePageIndex <= 0}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="pagination-btn"
+                onClick={() => setPageIndex((current) => Math.min(totalPages - 1, current + 1))}
+                disabled={safePageIndex >= totalPages - 1}
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
+        </nav>
       ) : null}
     </main>
   );
