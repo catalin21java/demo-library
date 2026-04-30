@@ -1,2 +1,1 @@
-sortare pe frontend 
-paginare
+add to favourites

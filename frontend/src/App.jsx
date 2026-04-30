@@ -281,6 +281,7 @@ function BooksListPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [sort, setSort] = useState({ column: "id", direction: "asc" });
   const [pageIndex, setPageIndex] = useState(0);
+  const [listSearch, setListSearch] = useState("");
   const { books, booksError, booksLoading, loadBooks, createBook } = useBooksCache();
 
   const sortedBooks = useMemo(() => {
@@ -291,7 +292,18 @@ function BooksListPage() {
     return nextBooks;
   }, [books, sort]);
 
-  const totalBooks = sortedBooks.length;
+  const filteredBooks = useMemo(() => {
+    const q = listSearch.trim().toLowerCase();
+    if (!q) {
+      return sortedBooks;
+    }
+    return sortedBooks.filter((book) => {
+      const haystack = `${book.title ?? ""} ${book.author ?? ""}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [sortedBooks, listSearch]);
+
+  const totalBooks = filteredBooks.length;
   const totalPages = totalBooks === 0 ? 0 : Math.ceil(totalBooks / BOOKS_PAGE_SIZE);
 
   useEffect(() => {
@@ -306,8 +318,12 @@ function BooksListPage() {
 
   const paginatedBooks = useMemo(() => {
     const start = safePageIndex * BOOKS_PAGE_SIZE;
-    return sortedBooks.slice(start, start + BOOKS_PAGE_SIZE);
-  }, [sortedBooks, safePageIndex]);
+    return filteredBooks.slice(start, start + BOOKS_PAGE_SIZE);
+  }, [filteredBooks, safePageIndex]);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [listSearch]);
 
   const rangeStart = totalBooks === 0 ? 0 : safePageIndex * BOOKS_PAGE_SIZE + 1;
   const rangeEnd = totalBooks === 0 ? 0 : Math.min(totalBooks, safePageIndex * BOOKS_PAGE_SIZE + BOOKS_PAGE_SIZE);
@@ -374,6 +390,16 @@ function BooksListPage() {
           {isCreating ? "Creating..." : "Create"}
         </button>
       </form>
+
+      <div className="list-search">
+        <input
+          type="search"
+          value={listSearch}
+          onChange={(event) => setListSearch(event.target.value)}
+          placeholder="Search list…"
+          aria-label="Filter books in the list"
+        />
+      </div>
 
       {error ? <p className="error">{error}</p> : null}
       {loading ? <p>Loading books...</p> : null}
