@@ -35,6 +35,15 @@ function normalizePublishedYear(value) {
   return parsedYear;
 }
 
+function normalizeIsFavourite(value) {
+  if (typeof value !== "boolean") {
+    const error = new Error("isFavourite must be true or false.");
+    error.statusCode = 400;
+    throw error;
+  }
+  return value;
+}
+
 export async function listBooks(options = {}) {
   const books = await bookRepository.getAllBooks();
   if (options.includeCreatedAt) {
@@ -73,6 +82,9 @@ export async function patchBook(id, payload) {
   }
   if (Object.prototype.hasOwnProperty.call(payload, "publishedYear")) {
     updates.publishedYear = normalizePublishedYear(payload.publishedYear);
+  }
+  if (Object.prototype.hasOwnProperty.call(payload, "isFavourite")) {
+    updates.isFavourite = normalizeIsFavourite(payload.isFavourite);
   }
 
   if (Object.keys(updates).length === 0) {

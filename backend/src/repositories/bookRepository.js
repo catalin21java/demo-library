@@ -1,17 +1,27 @@
 import db from "../config/db.js";
 
+function mapBookRow(row) {
+  if (!row) {
+    return null;
+  }
+  const favouriteValue = row.isFavourite;
+  return {
+    ...row,
+    isFavourite: favouriteValue === 1 || favouriteValue === true,
+  };
+}
 
 export function getAllBooks() {
   return new Promise((resolve, reject) => {
     db.all(
-      "SELECT id, title, author, published_year AS publishedYear, created_at AS createdAt FROM books ORDER BY id ASC",
+      "SELECT id, title, author, published_year AS publishedYear, is_favourite AS isFavourite, created_at AS createdAt FROM books ORDER BY id ASC",
       [],
       (error, rows) => {
         if (error) {
           reject(error);
           return;
         }
-        resolve(rows);
+        resolve(rows.map(mapBookRow));
       }
     );
   });
@@ -20,14 +30,14 @@ export function getAllBooks() {
 export function getBookById(id) {
   return new Promise((resolve, reject) => {
     db.get(
-      "SELECT id, title, author, published_year AS publishedYear, created_at AS createdAt FROM books WHERE id = ?",
+      "SELECT id, title, author, published_year AS publishedYear, is_favourite AS isFavourite, created_at AS createdAt FROM books WHERE id = ?",
       [id],
       (error, row) => {
         if (error) {
           reject(error);
           return;
         }
-        resolve(row || null);
+        resolve(mapBookRow(row));
       }
     );
   });
@@ -86,6 +96,14 @@ export function updateBook(id, updates) {
   if (Object.prototype.hasOwnProperty.call(updates, "publishedYear")) {
     allowedFields.push("published_year = ?");
     values.push(updates.publishedYear);
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, "isFavourite")) {
+    allowedFields.push("is_favourite = ?");
+    values.push(updates.isFavourite ? 1 : 0);
+  }
+
+  if (allowedFields.length === 0) {
+    return Promise.reject(new Error("No fields to update."));
   }
 
   return new Promise((resolve, reject) => {

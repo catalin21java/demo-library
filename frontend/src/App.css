@@ -38,6 +38,49 @@
   margin-bottom: 1rem;
 }
 
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.list-toolbar .list-search {
+  flex: 1;
+  min-width: 160px;
+  margin-bottom: 0;
+}
+
+.list-scope-toggle {
+  display: inline-flex;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.scope-btn {
+  padding: 0.55rem 0.85rem;
+  border: 0;
+  background: #f9fafb;
+  font: inherit;
+  cursor: pointer;
+  color: #374151;
+}
+
+.scope-btn + .scope-btn {
+  border-left: 1px solid #d1d5db;
+}
+
+.scope-btn:hover:not(.scope-btn-active) {
+  background: #f3f4f6;
+}
+
+.scope-btn-active {
+  background: #2563eb;
+  color: #fff;
+}
+
 .list-search input {
   width: 100%;
   box-sizing: border-box;
@@ -61,6 +104,28 @@
 
 .book-table th.th-actions {
   font-weight: 600;
+}
+
+.book-table th.th-favourite {
+  font-weight: 600;
+  text-align: center;
+}
+
+.book-table td.td-favourite {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.favourite-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.book-table td.td-favourite input[type="checkbox"] {
+  width: auto;
+  margin: 0;
 }
 
 .book-table thead th.th-sortable {

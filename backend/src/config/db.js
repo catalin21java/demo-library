@@ -28,6 +28,17 @@ db.serialize(() => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(
+    `ALTER TABLE books ADD COLUMN is_favourite INTEGER NOT NULL DEFAULT 0`,
+    (alterError) => {
+      if (
+        alterError &&
+        !String(alterError.message).toLowerCase().includes("duplicate column")
+      ) {
+        console.error("Failed to add is_favourite column:", alterError.message);
+      }
+    },
+  );
 });
 
 export default db;

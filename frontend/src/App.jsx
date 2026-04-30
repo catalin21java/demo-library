@@ -282,7 +282,10 @@ function BooksListPage() {
   const [sort, setSort] = useState({ column: "id", direction: "asc" });
   const [pageIndex, setPageIndex] = useState(0);
   const [listSearch, setListSearch] = useState("");
-  const { books, booksError, booksLoading, loadBooks, createBook } = useBooksCache();
+  const [listScope, setListScope] = useState("all");
+  const [pendingFavouriteId, setPendingFavouriteId] = useState(null);
+  const [favouriteToggleError, setFavouriteToggleError] = useState("");
+  const { books, booksError, booksLoading, loadBooks, createBook, updateBook } = useBooksCache();
 
   const sortedBooks = useMemo(() => {
     const nextBooks = [...books];
@@ -292,16 +295,23 @@ function BooksListPage() {
     return nextBooks;
   }, [books, sort]);
 
+  const scopedBooks = useMemo(() => {
+    if (listScope !== "favourites") {
+      return sortedBooks;
+    }
+    return sortedBooks.filter((book) => Boolean(book.isFavourite));
+  }, [sortedBooks, listScope]);
+
   const filteredBooks = useMemo(() => {
     const q = listSearch.trim().toLowerCase();
     if (!q) {
-      return sortedBooks;
+      return scopedBooks;
     }
-    return sortedBooks.filter((book) => {
+    return scopedBooks.filter((book) => {
       const haystack = `${book.title ?? ""} ${book.author ?? ""}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [sortedBooks, listSearch]);
+  }, [scopedBooks, listSearch]);
 
   const totalBooks = filteredBooks.length;
   const totalPages = totalBooks === 0 ? 0 : Math.ceil(totalBooks / BOOKS_PAGE_SIZE);
@@ -323,7 +333,20 @@ function BooksListPage() {
 
   useEffect(() => {
     setPageIndex(0);
-  }, [listSearch]);
+  }, [listSearch, listScope]);
+
+  async function handleFavouriteChange(book, nextIsFavourite) {
+    const normalizedId = String(book.id);
+    setFavouriteToggleError("");
+    setPendingFavouriteId(normalizedId);
+    try {
+      await updateBook(book.id, { isFavourite: nextIsFavourite });
+    } catch (toggleError) {
+      setFavouriteToggleError(toggleError.message || "Could not update favourite.");
+    } finally {
+      setPendingFavouriteId(null);
+    }
+  }
 
   const rangeStart = totalBooks === 0 ? 0 : safePageIndex * BOOKS_PAGE_SIZE + 1;
   const rangeEnd = totalBooks === 0 ? 0 : Math.min(totalBooks, safePageIndex * BOOKS_PAGE_SIZE + BOOKS_PAGE_SIZE);
@@ -361,7 +384,7 @@ function BooksListPage() {
     }
   }
 
-  const error = booksError || createError || "";
+  const error = booksError || createError || favouriteToggleError || "";
   const loading = booksLoading;
 
   return (
@@ -391,14 +414,32 @@ function BooksListPage() {
         </button>
       </form>
 
-      <div className="list-search">
-        <input
-          type="search"
-          value={listSearch}
-          onChange={(event) => setListSearch(event.target.value)}
-          placeholder="Search list…"
-          aria-label="Filter books in the list"
-        />
+      <div className="list-toolbar">
+        <div className="list-scope-toggle" role="group" aria-label="Which books to show">
+          <button
+            type="button"
+            className={`scope-btn${listScope === "all" ? " scope-btn-active" : ""}`}
+            onClick={() => setListScope("all")}
+          >
+            Show all
+          </button>
+          <button
+            type="button"
+            className={`scope-btn${listScope === "favourites" ? " scope-btn-active" : ""}`}
+            onClick={() => setListScope("favourites")}
+          >
+            Show favourites
+          </button>
+        </div>
+        <div className="list-search">
+          <input
+            type="search"
+            value={listSearch}
+            onChange={(event) => setListSearch(event.target.value)}
+            placeholder="Search list…"
+            aria-label="Filter books in the list"
+          />
+        </div>
       </div>
 
       {error ? <p className="error">{error}</p> : null}
@@ -438,6 +479,7 @@ function BooksListPage() {
                   <span aria-hidden>{sortLabel("author")}</span>
                 </button>
               </th>
+              <th className="th-favourite">Favourite</th>
               <th className="th-actions">Actions</th>
             </tr>
           </thead>
@@ -448,6 +490,17 @@ function BooksListPage() {
                   <td>{book.id}</td>
                   <td>{book.title}</td>
                   <td>{book.author}</td>
+                  <td className="td-favourite">
+                    <label className="favourite-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(book.isFavourite)}
+                        disabled={pendingFavouriteId === String(book.id)}
+                        onChange={(event) => handleFavouriteChange(book, event.target.checked)}
+                        aria-label={`Favourite: ${book.title}`}
+                      />
+                    </label>
+                  </td>
                   <td className="actions">
                     <Link to={`/books/${book.id}`} className="link-button">
                       View
