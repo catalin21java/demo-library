@@ -39,6 +39,14 @@ function filterBooksByScope(books, scope) {
   return books.filter((book) => Boolean(book.isFavourite));
 }
 
+function filterBooksByMinRating(books, minRating) {
+  const threshold = Number(minRating ?? 0);
+  if (!threshold || threshold <= 0) {
+    return books;
+  }
+  return books.filter((book) => Number(book.rating ?? 0) >= threshold);
+}
+
 export default function BooksListPage() {
   const { books, booksError, booksLoading, loadBooks } = useBooksCache();
   const {
@@ -52,6 +60,7 @@ export default function BooksListPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [listSearch, setListSearch] = useState("");
   const [listScope, setListScope] = useState("all");
+  const [minRating, setMinRating] = useState(0);
 
   useEffect(() => {
     loadBooks();
@@ -62,8 +71,9 @@ export default function BooksListPage() {
       compareBooksForSort(a, b, sort.column, sort.direction),
     );
     const scoped = filterBooksByScope(sorted, listScope);
-    return filterBooksBySearch(scoped, listSearch);
-  }, [books, sort, listScope, listSearch]);
+    const rated = filterBooksByMinRating(scoped, minRating);
+    return filterBooksBySearch(rated, listSearch);
+  }, [books, sort, listScope, listSearch, minRating]);
 
   const totalBooks = visibleBooks.length;
   const totalPages = totalBooks === 0 ? 0 : Math.ceil(totalBooks / BOOKS_PAGE_SIZE);
@@ -88,6 +98,11 @@ export default function BooksListPage() {
     setPageIndex(0);
   }
 
+  function handleMinRatingChange(nextMinRating) {
+    setMinRating(nextMinRating);
+    setPageIndex(0);
+  }
+
   const error = booksError || createError || favouriteToggleError || "";
 
   return (
@@ -101,6 +116,8 @@ export default function BooksListPage() {
         onScopeChange={handleScopeChange}
         listSearch={listSearch}
         onSearchChange={handleSearchChange}
+        minRating={minRating}
+        onMinRatingChange={handleMinRatingChange}
       />
 
       {error ? <p className="error">{error}</p> : null}

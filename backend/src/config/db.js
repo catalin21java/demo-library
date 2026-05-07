@@ -48,9 +48,21 @@ db.serialize(() => {
       title TEXT NOT NULL,
       author TEXT NOT NULL,
       published_year INTEGER,
+      rating INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(
+    `ALTER TABLE books ADD COLUMN rating INTEGER NOT NULL DEFAULT 0`,
+    (alterError) => {
+      if (
+        alterError &&
+        !String(alterError.message).toLowerCase().includes("duplicate column")
+      ) {
+        console.error("Failed to add rating column:", alterError.message);
+      }
+    },
+  );
   db.run(
     `ALTER TABLE books ADD COLUMN is_favourite INTEGER NOT NULL DEFAULT 0`,
     (alterError) => {

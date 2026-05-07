@@ -5,8 +5,11 @@ function mapBookRow(row) {
     return null;
   }
   const favouriteValue = row.isFavourite;
+  const ratingValue = row.rating;
+  const ratingNumber = ratingValue === undefined || ratingValue === null ? 0 : Number(ratingValue);
   return {
     ...row,
+    rating: Number.isInteger(ratingNumber) ? ratingNumber : 0,
     isFavourite: favouriteValue === 1 || favouriteValue === true,
   };
 }
@@ -14,7 +17,7 @@ function mapBookRow(row) {
 export function getAllBooks() {
   return new Promise((resolve, reject) => {
     db.all(
-      "SELECT id, title, author, published_year AS publishedYear, is_favourite AS isFavourite, created_at AS createdAt FROM books ORDER BY id ASC",
+      "SELECT id, title, author, published_year AS publishedYear, rating, is_favourite AS isFavourite, created_at AS createdAt FROM books ORDER BY id ASC",
       [],
       (error, rows) => {
         if (error) {
@@ -30,7 +33,7 @@ export function getAllBooks() {
 export function getBookById(id) {
   return new Promise((resolve, reject) => {
     db.get(
-      "SELECT id, title, author, published_year AS publishedYear, is_favourite AS isFavourite, created_at AS createdAt FROM books WHERE id = ?",
+      "SELECT id, title, author, published_year AS publishedYear, rating, is_favourite AS isFavourite, created_at AS createdAt FROM books WHERE id = ?",
       [id],
       (error, row) => {
         if (error) {
@@ -100,6 +103,10 @@ export function updateBook(id, updates) {
   if (Object.prototype.hasOwnProperty.call(updates, "isFavourite")) {
     allowedFields.push("is_favourite = ?");
     values.push(updates.isFavourite ? 1 : 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, "rating")) {
+    allowedFields.push("rating = ?");
+    values.push(updates.rating);
   }
 
   if (allowedFields.length === 0) {

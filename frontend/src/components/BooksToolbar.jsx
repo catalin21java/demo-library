@@ -8,6 +8,8 @@ export default function BooksToolbar({
   onScopeChange,
   listSearch,
   onSearchChange,
+  minRating,
+  onMinRatingChange,
 }) {
   return (
     <div className="list-toolbar">
@@ -34,6 +36,20 @@ export default function BooksToolbar({
           placeholder="Search list…"
           aria-label="Filter books in the list"
         />
+      </div>
+      <div className="list-rating-filter">
+        <select
+          value={minRating}
+          onChange={(event) => onMinRatingChange(Number(event.target.value))}
+          aria-label="Filter books by minimum rating"
+        >
+          <option value={0}>Any ratings</option>
+          <option value={1}>1+ stars</option>
+          <option value={2}>2+ stars</option>
+          <option value={3}>3+ stars</option>
+          <option value={4}>4+ stars</option>
+          <option value={5}>5 stars</option>
+        </select>
       </div>
     </div>
   );

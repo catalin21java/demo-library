@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 import SortableTableHeader from "./SortableTableHeader";
+import RatingStars from "./RatingStars";
 
 const SORTABLE_COLUMNS = [
   { id: "id", label: "ID" },
@@ -14,6 +15,9 @@ function BookRow({ book, isFavouritePending, onFavouriteChange }) {
       <td>{book.id}</td>
       <td>{book.title}</td>
       <td>{book.author}</td>
+      <td className="td-rating">
+        <RatingStars rating={book.rating ?? 0} />
+      </td>
       <td className="td-favourite">
         <label className="favourite-checkbox-label">
           <input
@@ -54,6 +58,7 @@ export default function BooksTable({
               onSort={onSort}
             />
           ))}
+          <th className="th-rating">Rating</th>
           <th className="th-favourite">Favourite</th>
           <th className="th-actions">Actions</th>
         </tr>

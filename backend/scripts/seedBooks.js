@@ -75,19 +75,34 @@ db.serialize(() => {
       title TEXT NOT NULL,
       author TEXT NOT NULL,
       published_year INTEGER,
+      rating INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  db.run(
+    `ALTER TABLE books ADD COLUMN rating INTEGER NOT NULL DEFAULT 0`,
+    (alterError) => {
+      if (
+        alterError &&
+        !String(alterError.message).toLowerCase().includes("duplicate column")
+      ) {
+        console.error("Failed to add rating column:", alterError.message);
+      }
+    },
+  );
 
   db.run("BEGIN IMMEDIATE TRANSACTION");
 
   db.run("DELETE FROM books");
   db.run("DELETE FROM sqlite_sequence WHERE name = 'books'");
 
-  const stmt = db.prepare("INSERT INTO books (title, author, published_year) VALUES (?, ?, ?)");
+  const stmt = db.prepare(
+    "INSERT INTO books (title, author, published_year, rating) VALUES (?, ?, ?, ?)",
+  );
 
   for (const row of BOOKS) {
-    stmt.run(row);
+    stmt.run([...row, 0]);
   }
 
   stmt.finalize();

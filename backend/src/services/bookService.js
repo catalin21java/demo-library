@@ -44,6 +44,23 @@ function normalizeIsFavourite(value) {
   return value;
 }
 
+function normalizeRating(value) {
+  if (value === undefined || value === null || value === "") {
+    const error = new Error("Rating is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const parsedRating = Number(value);
+  if (!Number.isInteger(parsedRating) || parsedRating < 0 || parsedRating > 5) {
+    const error = new Error("Rating must be an integer between 0 and 5.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return parsedRating;
+}
+
 export async function listBooks(options = {}) {
   const books = await bookRepository.getAllBooks();
   if (options.includeCreatedAt) {
@@ -85,6 +102,9 @@ export async function patchBook(id, payload) {
   }
   if (Object.prototype.hasOwnProperty.call(payload, "isFavourite")) {
     updates.isFavourite = normalizeIsFavourite(payload.isFavourite);
+  }
+  if (Object.prototype.hasOwnProperty.call(payload, "rating")) {
+    updates.rating = normalizeRating(payload.rating);
   }
 
   if (Object.keys(updates).length === 0) {
