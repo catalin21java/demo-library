@@ -58,8 +58,6 @@ export default function BookDetailCard({
   onDelete,
   isSaving,
   isDeleting,
-  onRatingChange,
-  isRatingUpdating,
 }) {
   function handleFieldChange(field, value) {
     onEditFormChange((current) => ({ ...current, [field]: value }));
@@ -85,16 +83,16 @@ export default function BookDetailCard({
         isEditing={isEditing}
         onChange={(value) => handleFieldChange("publishedYear", value)}
       />
-      {onRatingChange ? (
-        <div className="rating-detail">
-          <label className="rating-detail-label">Rating</label>
-          <RatingStars
-            rating={book.rating ?? 0}
-            onChange={onRatingChange}
-            disabled={Boolean(isRatingUpdating || isSaving || isDeleting)}
-          />
-        </div>
-      ) : null}
+      <div className="rating-detail">
+        <label className="rating-detail-label">Rating</label>
+        <RatingStars
+          rating={isEditing ? editForm.rating : book.rating ?? 0}
+          onChange={
+            isEditing ? (nextRating) => handleFieldChange("rating", nextRating) : undefined
+          }
+          disabled={Boolean(isSaving || isDeleting)}
+        />
+      </div>
       <p className="meta">Created: {new Date(book.createdAt).toLocaleString()}</p>
       <BookDetailActions
         isEditing={isEditing}

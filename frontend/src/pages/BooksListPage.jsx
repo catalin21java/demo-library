@@ -48,7 +48,7 @@ function filterBooksByMinRating(books, minRating) {
 }
 
 export default function BooksListPage() {
-  const { books, booksError, booksLoading, loadBooks } = useBooksCache();
+  const { books, booksError, booksLoading, loadBooks, updateBook } = useBooksCache();
   const {
     toggle: handleFavouriteChange,
     pendingId: pendingFavouriteId,
@@ -61,6 +61,8 @@ export default function BooksListPage() {
   const [listSearch, setListSearch] = useState("");
   const [listScope, setListScope] = useState("all");
   const [minRating, setMinRating] = useState(0);
+  const [pendingRatingId, setPendingRatingId] = useState(null);
+  const [ratingError, setRatingError] = useState("");
 
   useEffect(() => {
     loadBooks();
@@ -103,7 +105,20 @@ export default function BooksListPage() {
     setPageIndex(0);
   }
 
-  const error = booksError || createError || favouriteToggleError || "";
+  async function handleRatingChange(book, nextRating) {
+    const normalizedId = String(book.id);
+    setRatingError("");
+    setPendingRatingId(normalizedId);
+    try {
+      await updateBook(book.id, { rating: nextRating });
+    } catch (error) {
+      setRatingError(error.message || "Could not update rating.");
+    } finally {
+      setPendingRatingId(null);
+    }
+  }
+
+  const error = booksError || createError || favouriteToggleError || ratingError || "";
 
   return (
     <main className="app">
@@ -130,6 +145,8 @@ export default function BooksListPage() {
           onSort={handleSort}
           pendingFavouriteId={pendingFavouriteId}
           onFavouriteChange={handleFavouriteChange}
+          pendingRatingId={pendingRatingId}
+          onRatingChange={handleRatingChange}
         />
       ) : null}
 

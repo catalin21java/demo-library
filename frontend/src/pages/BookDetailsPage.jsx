@@ -4,13 +4,14 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import BookDetailCard from "../components/BookDetailCard";
 import useBooksCache from "../hooks/useBooksCache";
 
-const EMPTY_EDIT_FORM = { title: "", author: "", publishedYear: "" };
+const EMPTY_EDIT_FORM = { title: "", author: "", publishedYear: "", rating: 0 };
 
 function buildEditForm(book) {
   return {
     title: book.title,
     author: book.author,
     publishedYear: book.publishedYear ?? "",
+    rating: Number(book.rating ?? 0),
   };
 }
 
@@ -26,8 +27,6 @@ export default function BookDetailsPage() {
   const [deleteError, setDeleteError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [ratingError, setRatingError] = useState("");
-  const [isRatingUpdating, setIsRatingUpdating] = useState(false);
 
   const fallbackBook = books.find((currentBook) => String(currentBook.id) === id);
   const book = bookById[id] ?? fallbackBook;
@@ -39,7 +38,6 @@ export default function BookDetailsPage() {
 
   async function handleSave() {
     setSaveError("");
-    setRatingError("");
     setIsSaving(true);
     try {
       const updatedBook = await updateBook(id, editForm);
@@ -54,7 +52,6 @@ export default function BookDetailsPage() {
 
   async function handleDelete() {
     setDeleteError("");
-    setRatingError("");
     setIsDeleting(true);
     try {
       await removeBook(id);
@@ -63,18 +60,6 @@ export default function BookDetailsPage() {
       setDeleteError(error.message || "Failed to delete book.");
     } finally {
       setIsDeleting(false);
-    }
-  }
-
-  async function handleRatingChange(nextRating) {
-    setRatingError("");
-    setIsRatingUpdating(true);
-    try {
-      await updateBook(id, { rating: nextRating });
-    } catch (error) {
-      setRatingError(error.message || "Failed to update rating.");
-    } finally {
-      setIsRatingUpdating(false);
     }
   }
 
@@ -92,11 +77,10 @@ export default function BookDetailsPage() {
   const notFound = bookState.status === 404;
   const error = useMemo(() => {
     if (saveError) return saveError;
-    if (ratingError) return ratingError;
     if (deleteError) return deleteError;
     if (notFound) return "";
     return bookState.error || "";
-  }, [bookState.error, deleteError, notFound, ratingError, saveError]);
+  }, [bookState.error, deleteError, notFound, saveError]);
 
   if (loading) {
     return (
@@ -145,8 +129,6 @@ export default function BookDetailsPage() {
         onDelete={handleDelete}
         isSaving={isSaving}
         isDeleting={isDeleting}
-        onRatingChange={handleRatingChange}
-        isRatingUpdating={isRatingUpdating}
       />
     </main>
   );

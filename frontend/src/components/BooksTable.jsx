@@ -9,14 +9,24 @@ const SORTABLE_COLUMNS = [
   { id: "author", label: "Author" },
 ];
 
-function BookRow({ book, isFavouritePending, onFavouriteChange }) {
+function BookRow({
+  book,
+  isFavouritePending,
+  onFavouriteChange,
+  isRatingPending,
+  onRatingChange,
+}) {
   return (
     <tr>
       <td>{book.id}</td>
       <td>{book.title}</td>
       <td>{book.author}</td>
       <td className="td-rating">
-        <RatingStars rating={book.rating ?? 0} />
+        <RatingStars
+          rating={book.rating ?? 0}
+          onChange={(nextRating) => onRatingChange(book, nextRating)}
+          disabled={isRatingPending}
+        />
       </td>
       <td className="td-favourite">
         <label className="favourite-checkbox-label">
@@ -44,6 +54,8 @@ export default function BooksTable({
   onSort,
   pendingFavouriteId,
   onFavouriteChange,
+  pendingRatingId,
+  onRatingChange,
 }) {
   return (
     <table className="book-table">
@@ -70,6 +82,8 @@ export default function BooksTable({
             book={book}
             isFavouritePending={pendingFavouriteId === String(book.id)}
             onFavouriteChange={onFavouriteChange}
+            isRatingPending={pendingRatingId === String(book.id)}
+            onRatingChange={onRatingChange}
           />
         ))}
       </tbody>
