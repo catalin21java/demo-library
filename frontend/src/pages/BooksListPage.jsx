@@ -74,20 +74,18 @@ export default function BooksListPage() {
     return visibleBooks.slice(start, start + BOOKS_PAGE_SIZE);
   }, [visibleBooks, safePageIndex]);
 
-  useEffect(() => {
-    if (totalPages === 0) {
-      setPageIndex(0);
-      return;
-    }
-    setPageIndex((current) => Math.min(current, totalPages - 1));
-  }, [totalPages]);
-
-  useEffect(() => {
-    setPageIndex(0);
-  }, [listSearch, listScope]);
-
   function handleSort(column) {
     setSort((current) => nextSortState(current, column));
+  }
+
+  function handleScopeChange(nextScope) {
+    setListScope(nextScope);
+    setPageIndex(0);
+  }
+
+  function handleSearchChange(nextSearch) {
+    setListSearch(nextSearch);
+    setPageIndex(0);
   }
 
   const error = booksError || createError || favouriteToggleError || "";
@@ -100,9 +98,9 @@ export default function BooksListPage() {
 
       <BooksToolbar
         listScope={listScope}
-        onScopeChange={setListScope}
+        onScopeChange={handleScopeChange}
         listSearch={listSearch}
-        onSearchChange={setListSearch}
+        onSearchChange={handleSearchChange}
       />
 
       {error ? <p className="error">{error}</p> : null}
