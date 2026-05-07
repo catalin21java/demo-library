@@ -16,7 +16,30 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const db = new sqlite3.Database(dbPath);
+try {
+  fs.accessSync(dataDir, fs.constants.W_OK);
+} catch {
+  throw new Error(`Database directory is not writable: ${dataDir}`);
+}
+
+if (fs.existsSync(dbPath)) {
+  try {
+    fs.accessSync(dbPath, fs.constants.W_OK);
+  } catch {
+    // Try to self-heal common local permission issues before failing hard.
+    fs.chmodSync(dbPath, 0o644);
+  }
+}
+
+const db = new sqlite3.Database(
+  dbPath,
+  sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
+  (openError) => {
+    if (openError) {
+      console.error(`Failed to open SQLite database at ${dbPath}:`, openError.message);
+    }
+  },
+);
 
 db.serialize(() => {
   db.run(`
