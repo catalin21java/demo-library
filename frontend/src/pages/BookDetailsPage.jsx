@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import BookDetailCard from "../components/BookDetailCard";
@@ -38,9 +38,31 @@ export default function BookDetailsPage() {
 
   async function handleSave() {
     setSaveError("");
+    const yearStr = String(editForm.publishedYear ?? "").trim();
+    let publishedYear = null;
+    if (yearStr !== "") {
+      const parsedYear = Number(yearStr);
+      if (!Number.isInteger(parsedYear) || parsedYear < 0) {
+        setSaveError("Published year must be a positive whole number.");
+        return;
+      }
+      publishedYear = parsedYear;
+    }
+
+    const rating = Number(editForm.rating);
+    if (!Number.isInteger(rating) || rating < 0 || rating > 5) {
+      setSaveError("Rating must be an integer between 0 and 5.");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const updatedBook = await updateBook(id, editForm);
+      const updatedBook = await updateBook(id, {
+        title: String(editForm.title ?? "").trim(),
+        author: String(editForm.author ?? "").trim(),
+        publishedYear,
+        rating,
+      });
       setEditForm(buildEditForm(updatedBook));
       setIsEditing(false);
     } catch (error) {
@@ -75,12 +97,8 @@ export default function BookDetailsPage() {
 
   const loading = bookState.isLoading || (!bookState.hasLoaded && !book);
   const notFound = bookState.status === 404;
-  const error = useMemo(() => {
-    if (saveError) return saveError;
-    if (deleteError) return deleteError;
-    if (notFound) return "";
-    return bookState.error || "";
-  }, [bookState.error, deleteError, notFound, saveError]);
+  const error =
+    saveError || deleteError || (notFound ? "" : bookState.error || "");
 
   if (loading) {
     return (

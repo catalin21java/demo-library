@@ -1,17 +1,5 @@
 import * as bookRepository from "../repositories/bookRepository.js";
 
-function stripCreatedAtFromBook(book) {
-  if (!book) {
-    return book;
-  }
-  const { createdAt, ...bookWithoutCreatedAt } = book;
-  return bookWithoutCreatedAt;
-}
-
-function stripCreatedAtFromBooks(books) {
-  return books.map(stripCreatedAtFromBook);
-}
-
 function normalizeText(value, fieldName) {
   const normalized = String(value || "").trim();
   if (!normalized) {
@@ -61,12 +49,8 @@ function normalizeRating(value) {
   return parsedRating;
 }
 
-export async function listBooks(options = {}) {
-  const books = await bookRepository.getAllBooks();
-  if (options.includeCreatedAt) {
-    return books;
-  }
-  return stripCreatedAtFromBooks(books);
+export async function listBooks() {
+  return bookRepository.getAllBooks();
 }
 
 export async function getBook(id) {
@@ -76,7 +60,7 @@ export async function getBook(id) {
     error.statusCode = 404;
     throw error;
   }
-  return stripCreatedAtFromBook(book);
+  return book;
 }
 
 export async function addBook(payload) {

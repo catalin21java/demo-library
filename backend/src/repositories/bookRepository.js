@@ -8,9 +8,13 @@ function mapBookRow(row) {
   const ratingValue = row.rating;
   const ratingNumber = ratingValue === undefined || ratingValue === null ? 0 : Number(ratingValue);
   return {
-    ...row,
+    id: row.id,
+    title: row.title,
+    author: row.author,
+    publishedYear: row.publishedYear,
     rating: Number.isInteger(ratingNumber) ? ratingNumber : 0,
     isFavourite: favouriteValue === 1 || favouriteValue === true,
+    createdAt: row.createdAt,
   };
 }
 
@@ -48,38 +52,16 @@ export function getBookById(id) {
 
 export function createBook({ title, author, publishedYear }) {
   return new Promise((resolve, reject) => {
-    db.get(
-      `
-      SELECT CASE
-        WHEN NOT EXISTS (SELECT 1 FROM books WHERE id = 1) THEN 1
-        ELSE (
-          SELECT MIN(b1.id) + 1
-          FROM books b1
-          LEFT JOIN books b2 ON b1.id + 1 = b2.id
-          WHERE b2.id IS NULL
-        )
-      END AS nextId
-      `,
-      [],
-      (nextIdError, row) => {
-        if (nextIdError) {
-          reject(nextIdError);
+    db.run(
+      "INSERT INTO books (title, author, published_year) VALUES (?, ?, ?)",
+      [title, author, publishedYear],
+      function onInsert(insertError) {
+        if (insertError) {
+          reject(insertError);
           return;
         }
-
-        const nextId = row?.nextId;
-        db.run(
-          "INSERT INTO books (id, title, author, published_year) VALUES (?, ?, ?, ?)",
-          [nextId, title, author, publishedYear],
-          function onInsert(insertError) {
-            if (insertError) {
-              reject(insertError);
-              return;
-            }
-            getBookById(nextId).then(resolve).catch(reject);
-          }
-        );
-      }
+        getBookById(this.lastID).then(resolve).catch(reject);
+      },
     );
   });
 }
@@ -134,43 +116,12 @@ export function updateBook(id, updates) {
 
 export function deleteBook(id) {
   return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      db.run("BEGIN TRANSACTION");
-
-      db.run("DELETE FROM books WHERE id = ?", [id], function onDelete(deleteError) {
-        if (deleteError) {
-          db.run("ROLLBACK");
-          reject(deleteError);
-          return;
-        }
-
-        if (this.changes === 0) {
-          db.run("ROLLBACK");
-          resolve(false);
-          return;
-        }
-
-        db.run(
-          "UPDATE books SET id = id - 1 WHERE id > ?",
-          [id],
-          function onReindex(updateError) {
-            if (updateError) {
-              db.run("ROLLBACK");
-              reject(updateError);
-              return;
-            }
-
-            db.run("COMMIT", (commitError) => {
-              if (commitError) {
-                db.run("ROLLBACK");
-                reject(commitError);
-                return;
-              }
-              resolve(true);
-            });
-          }
-        );
-      });
+    db.run("DELETE FROM books WHERE id = ?", [id], function onDelete(deleteError) {
+      if (deleteError) {
+        reject(deleteError);
+        return;
+      }
+      resolve(this.changes > 0);
     });
   });
 }

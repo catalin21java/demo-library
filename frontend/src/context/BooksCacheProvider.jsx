@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createBookRequest,
@@ -41,25 +41,48 @@ export function BooksCacheProvider({ children }) {
   const [bookById, setBookById] = useState({});
   const [bookStatesById, setBookStatesById] = useState({});
 
+  const booksLoadingRef = useRef(booksLoading);
+  const hasLoadedBooksRef = useRef(hasLoadedBooks);
+  const bookStatesByIdRef = useRef(bookStatesById);
+  const loadBookInFlightRef = useRef(new Set());
+
+  useEffect(() => {
+    booksLoadingRef.current = booksLoading;
+  }, [booksLoading]);
+
+  useEffect(() => {
+    hasLoadedBooksRef.current = hasLoadedBooks;
+  }, [hasLoadedBooks]);
+
+  useEffect(() => {
+    bookStatesByIdRef.current = bookStatesById;
+  }, [bookStatesById]);
+
   const upsertBook = useCallback((book) => {
     const normalizedId = String(book.id);
     setBookById((current) => ({ ...current, [normalizedId]: book }));
-    setBookStatesById((current) => ({
-      ...current,
-      [normalizedId]: LOADED_BOOK_STATE,
-    }));
+    setBookStatesById((current) => {
+      const next = {
+        ...current,
+        [normalizedId]: LOADED_BOOK_STATE,
+      };
+      bookStatesByIdRef.current = next;
+      return next;
+    });
   }, []);
 
   const loadBooks = useCallback(async () => {
-    if (booksLoading || hasLoadedBooks) {
+    if (booksLoadingRef.current || hasLoadedBooksRef.current) {
       return;
     }
 
+    booksLoadingRef.current = true;
     setBooksLoading(true);
     setBooksError("");
     try {
       const data = await fetchBooks();
       setBooks(data);
+      hasLoadedBooksRef.current = true;
       setHasLoadedBooks(true);
       setBookById((current) => {
         const next = { ...current };
@@ -73,63 +96,74 @@ export function BooksCacheProvider({ children }) {
         data.forEach((book) => {
           next[String(book.id)] = LOADED_BOOK_STATE;
         });
+        bookStatesByIdRef.current = next;
         return next;
       });
     } catch (error) {
       setBooksError(error.message || "Failed to load books.");
     } finally {
+      booksLoadingRef.current = false;
       setBooksLoading(false);
     }
-  }, [booksLoading, hasLoadedBooks]);
+  }, []);
 
-  const loadBookById = useCallback(
-    async (id) => {
-      const normalizedId = String(id);
-      const currentState = bookStatesById[normalizedId];
-      const alreadyLoaded = currentState?.hasLoaded;
-      const currentlyBusy = currentState?.isLoading || currentState?.isRefreshing;
+  const loadBookById = useCallback(async (id) => {
+    const normalizedId = String(id);
+    const currentState = bookStatesByIdRef.current[normalizedId];
+    const alreadyLoaded = currentState?.hasLoaded;
+    const inFlight = loadBookInFlightRef.current.has(normalizedId);
 
-      if (alreadyLoaded || currentlyBusy) {
-        return;
-      }
+    if (alreadyLoaded || inFlight) {
+      return;
+    }
 
-      setBookStatesById((current) => ({
-        ...current,
-        [normalizedId]: LOADING_BOOK_STATE,
-      }));
+    loadBookInFlightRef.current.add(normalizedId);
+    setBookStatesById((current) => ({
+      ...current,
+      [normalizedId]: LOADING_BOOK_STATE,
+    }));
 
-      try {
-        const book = await fetchBookById(normalizedId);
-        setBookById((current) => ({ ...current, [normalizedId]: book }));
-        setBookStatesById((current) => ({
+    try {
+      const book = await fetchBookById(normalizedId);
+      setBookById((current) => ({ ...current, [normalizedId]: book }));
+      setBookStatesById((current) => {
+        const next = {
           ...current,
           [normalizedId]: LOADED_BOOK_STATE,
-        }));
-        setBooks((currentBooks) => {
-          const exists = currentBooks.some(
-            (currentBook) => String(currentBook.id) === normalizedId,
-          );
-          if (!exists) {
-            return currentBooks;
-          }
-          return currentBooks.map((currentBook) =>
-            String(currentBook.id) === normalizedId ? book : currentBook,
-          );
-        });
-      } catch (error) {
-        setBookStatesById((current) => ({
+        };
+        bookStatesByIdRef.current = next;
+        return next;
+      });
+      setBooks((currentBooks) => {
+        const exists = currentBooks.some(
+          (currentBook) => String(currentBook.id) === normalizedId,
+        );
+        if (!exists) {
+          return currentBooks;
+        }
+        return currentBooks.map((currentBook) =>
+          String(currentBook.id) === normalizedId ? book : currentBook,
+        );
+      });
+    } catch (error) {
+      setBookStatesById((current) => {
+        const next = {
           ...current,
           [normalizedId]: buildErrorBookState(error),
-        }));
-      }
-    },
-    [bookStatesById],
-  );
+        };
+        bookStatesByIdRef.current = next;
+        return next;
+      });
+    } finally {
+      loadBookInFlightRef.current.delete(normalizedId);
+    }
+  }, []);
 
   const createBook = useCallback(
     async (newBook) => {
       const createdBook = await createBookRequest(newBook);
       setBooks((currentBooks) => [...currentBooks, createdBook]);
+      hasLoadedBooksRef.current = true;
       setHasLoadedBooks(true);
       upsertBook(createdBook);
       return createdBook;
@@ -167,6 +201,7 @@ export function BooksCacheProvider({ children }) {
     setBookStatesById((current) => {
       const next = { ...current };
       delete next[normalizedId];
+      bookStatesByIdRef.current = next;
       return next;
     });
   }, []);

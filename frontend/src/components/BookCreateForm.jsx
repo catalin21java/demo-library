@@ -33,16 +33,19 @@ export default function BookCreateForm({ onError }) {
         value={form.title}
         onChange={(event) => updateField("title", event.target.value)}
         placeholder="Title"
+        aria-label="Title"
       />
       <input
         value={form.author}
         onChange={(event) => updateField("author", event.target.value)}
         placeholder="Author"
+        aria-label="Author"
       />
       <input
         value={form.publishedYear}
         onChange={(event) => updateField("publishedYear", event.target.value)}
         placeholder="Published year"
+        aria-label="Published year"
       />
       <button type="submit" disabled={isCreating}>
         {isCreating ? "Creating..." : "Create"}

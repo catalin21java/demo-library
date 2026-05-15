@@ -1,3 +1,5 @@
+const STAR_VALUES = Object.freeze([1, 2, 3, 4, 5]);
+
 function StarIcon({ filled }) {
   const filledColor = "#f59e0b";
   const emptyColor = "#d1d5db";
@@ -28,8 +30,7 @@ export default function RatingStars({ rating, onChange, disabled }) {
   const normalizedRating = Number.isInteger(currentRating) ? currentRating : 0;
   const canInteract = typeof onChange === "function";
 
-  const starValues = [1, 2, 3, 4, 5];
-  const renderedStars = starValues.map((star) => {
+  const renderedStars = STAR_VALUES.map((star) => {
     const filled = normalizedRating >= star;
 
     if (canInteract) {
@@ -42,7 +43,7 @@ export default function RatingStars({ rating, onChange, disabled }) {
           onClick={() => onChange(isSelected ? 0 : star)}
           disabled={disabled}
           aria-label={`Set rating to ${isSelected ? 0 : star}`}
-          aria-pressed={normalizedRating === star}
+          aria-pressed={isSelected}
         >
           <StarIcon filled={filled} />
         </button>

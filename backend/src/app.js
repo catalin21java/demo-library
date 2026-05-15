@@ -12,6 +12,10 @@ app.use("/api/books", bookRoutes);
 
 app.use((error, req, res, next) => {
   const statusCode = error.statusCode || 500;
+  if (statusCode >= 500) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+  }
   res.status(statusCode).json({
     message: error.message || "Unexpected server error.",
   });

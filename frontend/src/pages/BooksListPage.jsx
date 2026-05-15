@@ -4,26 +4,31 @@ import BookCreateForm from "../components/BookCreateForm";
 import BooksPagination from "../components/BooksPagination";
 import BooksTable from "../components/BooksTable";
 import BooksToolbar from "../components/BooksToolbar";
+import useBookFieldUpdate from "../hooks/useBookFieldUpdate";
 import useBooksCache from "../hooks/useBooksCache";
-import useFavouriteToggle from "../hooks/useFavouriteToggle";
 import { BOOKS_PAGE_SIZE } from "../utils/constants";
 import {
   filterBooksByMinRating,
   filterBooksByScope,
   filterBooksBySearch,
   nextSortState,
-} from "../utils/booksListPageHelpers";
+} from "../utils/bookFilters";
 import { compareBooksForSort } from "../utils/sortBooks";
 
 const DEFAULT_SORT = { column: "id", direction: "asc" };
 
 export default function BooksListPage() {
-  const { books, booksError, booksLoading, loadBooks, updateBook } = useBooksCache();
+  const { books, booksError, booksLoading, loadBooks } = useBooksCache();
   const {
-    toggle: handleFavouriteChange,
+    updateField: handleFavouriteChange,
     pendingId: pendingFavouriteId,
     error: favouriteToggleError,
-  } = useFavouriteToggle();
+  } = useBookFieldUpdate("isFavourite", "Could not update favourite.");
+  const {
+    updateField: handleRatingChange,
+    pendingId: pendingRatingId,
+    error: ratingError,
+  } = useBookFieldUpdate("rating", "Could not update rating.");
 
   const [createError, setCreateError] = useState("");
   const [sort, setSort] = useState(DEFAULT_SORT);
@@ -31,8 +36,6 @@ export default function BooksListPage() {
   const [listSearch, setListSearch] = useState("");
   const [listScope, setListScope] = useState("all");
   const [minRating, setMinRating] = useState(0);
-  const [pendingRatingId, setPendingRatingId] = useState(null);
-  const [ratingError, setRatingError] = useState("");
 
   useEffect(() => {
     loadBooks();
@@ -73,19 +76,6 @@ export default function BooksListPage() {
   function handleMinRatingChange(nextMinRating) {
     setMinRating(nextMinRating);
     setPageIndex(0);
-  }
-
-  async function handleRatingChange(book, nextRating) {
-    const normalizedId = String(book.id);
-    setRatingError("");
-    setPendingRatingId(normalizedId);
-    try {
-      await updateBook(book.id, { rating: nextRating });
-    } catch (error) {
-      setRatingError(error.message || "Could not update rating.");
-    } finally {
-      setPendingRatingId(null);
-    }
   }
 
   const error = booksError || createError || favouriteToggleError || ratingError || "";

@@ -1,15 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import sqlite3 from "sqlite3";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, "../data");
-const dbPath = path.join(dataDir, "app.sqlite");
-
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
+import db from "../src/config/db.js";
 
 /** @type {readonly [string, string, number][]} */
 const BOOKS = [
@@ -65,33 +54,7 @@ const BOOKS = [
   ["A Visit from the Goon Squad", "Jennifer Egan", 2010],
 ];
 
-const sqlite = sqlite3.verbose();
-const db = new sqlite3.Database(dbPath);
-
 db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS books (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      author TEXT NOT NULL,
-      published_year INTEGER,
-      rating INTEGER NOT NULL DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  db.run(
-    `ALTER TABLE books ADD COLUMN rating INTEGER NOT NULL DEFAULT 0`,
-    (alterError) => {
-      if (
-        alterError &&
-        !String(alterError.message).toLowerCase().includes("duplicate column")
-      ) {
-        console.error("Failed to add rating column:", alterError.message);
-      }
-    },
-  );
-
   db.run("BEGIN IMMEDIATE TRANSACTION");
 
   db.run("DELETE FROM books");
@@ -109,13 +72,16 @@ db.serialize(() => {
 
   db.run("COMMIT", (commitError) => {
     if (commitError) {
+      // eslint-disable-next-line no-console
       console.error(commitError);
       process.exit(1);
       return;
     }
-    console.log(`Seeded ${BOOKS.length} books into ${dbPath}`);
+    // eslint-disable-next-line no-console
+    console.log(`Seeded ${BOOKS.length} books`);
     db.close((closeError) => {
       if (closeError) {
+        // eslint-disable-next-line no-console
         console.error(closeError);
         process.exit(1);
       }
