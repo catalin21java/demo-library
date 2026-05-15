@@ -7,45 +7,15 @@ import BooksToolbar from "../components/BooksToolbar";
 import useBooksCache from "../hooks/useBooksCache";
 import useFavouriteToggle from "../hooks/useFavouriteToggle";
 import { BOOKS_PAGE_SIZE } from "../utils/constants";
+import {
+  filterBooksByMinRating,
+  filterBooksByScope,
+  filterBooksBySearch,
+  nextSortState,
+} from "../utils/booksListPageHelpers";
 import { compareBooksForSort } from "../utils/sortBooks";
 
 const DEFAULT_SORT = { column: "id", direction: "asc" };
-
-function nextSortState(currentSort, column) {
-  if (currentSort.column !== column) {
-    return { column, direction: "asc" };
-  }
-  return {
-    column,
-    direction: currentSort.direction === "asc" ? "desc" : "asc",
-  };
-}
-
-function filterBooksBySearch(books, search) {
-  const query = search.trim().toLowerCase();
-  if (!query) {
-    return books;
-  }
-  return books.filter((book) => {
-    const haystack = `${book.title ?? ""} ${book.author ?? ""}`.toLowerCase();
-    return haystack.includes(query);
-  });
-}
-
-function filterBooksByScope(books, scope) {
-  if (scope !== "favourites") {
-    return books;
-  }
-  return books.filter((book) => Boolean(book.isFavourite));
-}
-
-function filterBooksByMinRating(books, minRating) {
-  const threshold = Number(minRating ?? 0);
-  if (!threshold || threshold <= 0) {
-    return books;
-  }
-  return books.filter((book) => Number(book.rating ?? 0) >= threshold);
-}
 
 export default function BooksListPage() {
   const { books, booksError, booksLoading, loadBooks, updateBook } = useBooksCache();
