@@ -1,13 +1,18 @@
 import express from "express";
 import cors from "cors";
-import bookRoutes from "./routes/bookRoutes.js"
+import adminRoutes from "./routes/adminRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import bookRoutes from "./routes/bookRoutes.js";
+import favouriteRoutes from "./routes/favouriteRoutes.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-
+app.use("/api/auth", authRoutes);
+app.use("/api/favourites", favouriteRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/books", bookRoutes);
 
 app.use((error, req, res, next) => {

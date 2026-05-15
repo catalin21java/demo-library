@@ -336,3 +336,120 @@
 .list-rating-filter {
   min-width: 160px;
 }
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-header-user {
+  font-weight: 600;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.role-badge.role-admin {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.role-badge.role-user {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.btn-secondary {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+}
+
+.btn-secondary:hover {
+  background: #f9fafb;
+}
+
+.auth-page {
+  max-width: 420px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.auth-form input,
+.auth-form select {
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.auth-form button {
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.auth-form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.notice {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.9rem;
+}
+
+.success {
+  color: #047857;
+}
+
+.favourite-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

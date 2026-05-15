@@ -19,11 +19,11 @@ export function filterBooksBySearch(books, search) {
   });
 }
 
-export function filterBooksByScope(books, scope) {
+export function filterBooksByScope(books, scope, favouriteIds) {
   if (scope !== "favourites") {
     return books;
   }
-  return books.filter((book) => Boolean(book.isFavourite));
+  return books.filter((book) => favouriteIds.has(String(book.id)));
 }
 
 export function filterBooksByMinRating(books, minRating) {

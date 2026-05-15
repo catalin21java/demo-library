@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
+import AppHeader from "../components/AppHeader";
 import BookCreateForm from "../components/BookCreateForm";
 import BooksPagination from "../components/BooksPagination";
 import BooksTable from "../components/BooksTable";
 import BooksToolbar from "../components/BooksToolbar";
+import useAuth from "../hooks/useAuth";
 import useBookFieldUpdate from "../hooks/useBookFieldUpdate";
 import useBooksCache from "../hooks/useBooksCache";
+import useFavourites from "../hooks/useFavourites";
 import { BOOKS_PAGE_SIZE } from "../utils/constants";
 import {
   filterBooksByMinRating,
@@ -18,12 +21,15 @@ import { compareBooksForSort } from "../utils/sortBooks";
 const DEFAULT_SORT = { column: "id", direction: "asc" };
 
 export default function BooksListPage() {
+  const { isAdmin } = useAuth();
   const { books, booksError, booksLoading, loadBooks } = useBooksCache();
   const {
-    updateField: handleFavouriteChange,
+    favouriteIds,
+    isFavourite,
+    toggleFavourite,
     pendingId: pendingFavouriteId,
     error: favouriteToggleError,
-  } = useBookFieldUpdate("isFavourite", "Could not update favourite.");
+  } = useFavourites();
   const {
     updateField: handleRatingChange,
     pendingId: pendingRatingId,
@@ -45,10 +51,10 @@ export default function BooksListPage() {
     const sorted = [...books].sort((a, b) =>
       compareBooksForSort(a, b, sort.column, sort.direction),
     );
-    const scoped = filterBooksByScope(sorted, listScope);
+    const scoped = filterBooksByScope(sorted, listScope, favouriteIds);
     const rated = filterBooksByMinRating(scoped, minRating);
     return filterBooksBySearch(rated, listSearch);
-  }, [books, sort, listScope, listSearch, minRating]);
+  }, [books, sort, listScope, listSearch, minRating, favouriteIds]);
 
   const totalBooks = visibleBooks.length;
   const totalPages = totalBooks === 0 ? 0 : Math.ceil(totalBooks / BOOKS_PAGE_SIZE);
@@ -78,13 +84,21 @@ export default function BooksListPage() {
     setPageIndex(0);
   }
 
+  function handleFavouriteChange(book, checked) {
+    if (checked === isFavourite(book.id)) {
+      return;
+    }
+    toggleFavourite(book);
+  }
+
   const error = booksError || createError || favouriteToggleError || ratingError || "";
 
   return (
     <main className="app">
+      <AppHeader />
       <h1>Books</h1>
 
-      <BookCreateForm onError={setCreateError} />
+      {isAdmin ? <BookCreateForm onError={setCreateError} /> : null}
 
       <BooksToolbar
         listScope={listScope}
@@ -103,10 +117,12 @@ export default function BooksListPage() {
           books={paginatedBooks}
           sort={sort}
           onSort={handleSort}
+          isFavourite={isFavourite}
           pendingFavouriteId={pendingFavouriteId}
           onFavouriteChange={handleFavouriteChange}
           pendingRatingId={pendingRatingId}
           onRatingChange={handleRatingChange}
+          canEditRating={isAdmin}
         />
       ) : null}
 

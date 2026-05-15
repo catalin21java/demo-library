@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
+import AppHeader from "../components/AppHeader";
 import BookDetailCard from "../components/BookDetailCard";
+import useAuth from "../hooks/useAuth";
 import useBooksCache from "../hooks/useBooksCache";
+import useFavourites from "../hooks/useFavourites";
 
 const EMPTY_EDIT_FORM = { title: "", author: "", publishedYear: "", rating: 0 };
 
@@ -18,8 +21,15 @@ function buildEditForm(book) {
 export default function BookDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const { books, bookById, bookStatesById, loadBookById, updateBook, removeBook } =
     useBooksCache();
+  const {
+    isFavourite,
+    toggleFavourite,
+    pendingId: pendingFavouriteId,
+    error: favouriteError,
+  } = useFavourites();
 
   const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
   const [isEditing, setIsEditing] = useState(false);
@@ -95,14 +105,25 @@ export default function BookDetailsPage() {
     setIsEditing(false);
   }
 
+  function handleFavouriteChange(checked) {
+    if (!book || checked === isFavourite(book.id)) {
+      return;
+    }
+    toggleFavourite(book);
+  }
+
   const loading = bookState.isLoading || (!bookState.hasLoaded && !book);
   const notFound = bookState.status === 404;
   const error =
-    saveError || deleteError || (notFound ? "" : bookState.error || "");
+    saveError ||
+    deleteError ||
+    favouriteError ||
+    (notFound ? "" : bookState.error || "");
 
   if (loading) {
     return (
       <main className="app">
+        <AppHeader />
         <p>Loading book...</p>
       </main>
     );
@@ -111,6 +132,7 @@ export default function BookDetailsPage() {
   if (notFound) {
     return (
       <main className="app">
+        <AppHeader />
         <h1>Book not found</h1>
         <p>This page is no longer available.</p>
         <Link to="/books">Back to books</Link>
@@ -121,6 +143,7 @@ export default function BookDetailsPage() {
   if (!book) {
     return (
       <main className="app">
+        <AppHeader />
         <h1>Book details</h1>
         <p>{error || "Unable to load book right now."}</p>
         <Link to="/books">Back to books</Link>
@@ -130,6 +153,7 @@ export default function BookDetailsPage() {
 
   return (
     <main className="app">
+      <AppHeader />
       <h1>Book details</h1>
       <p>
         <Link to="/books">Back to books</Link>
@@ -147,6 +171,10 @@ export default function BookDetailsPage() {
         onDelete={handleDelete}
         isSaving={isSaving}
         isDeleting={isDeleting}
+        canEdit={isAdmin}
+        isFavourite={isFavourite(book.id)}
+        isFavouritePending={pendingFavouriteId === String(book.id)}
+        onFavouriteChange={handleFavouriteChange}
       />
     </main>
   );

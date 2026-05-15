@@ -11,10 +11,12 @@ const SORTABLE_COLUMNS = [
 
 function BookRow({
   book,
+  isFavourite,
   isFavouritePending,
   onFavouriteChange,
   isRatingPending,
   onRatingChange,
+  canEditRating,
 }) {
   return (
     <tr>
@@ -24,15 +26,17 @@ function BookRow({
       <td className="td-rating">
         <RatingStars
           rating={book.rating ?? 0}
-          onChange={(nextRating) => onRatingChange(book, nextRating)}
-          disabled={isRatingPending}
+          onChange={
+            canEditRating ? (nextRating) => onRatingChange(book, nextRating) : undefined
+          }
+          disabled={isRatingPending || !canEditRating}
         />
       </td>
       <td className="td-favourite">
         <label className="favourite-checkbox-label">
           <input
             type="checkbox"
-            checked={Boolean(book.isFavourite)}
+            checked={isFavourite}
             disabled={isFavouritePending}
             onChange={(event) => onFavouriteChange(book, event.target.checked)}
             aria-label={`Favourite: ${book.title}`}
@@ -52,10 +56,12 @@ export default function BooksTable({
   books,
   sort,
   onSort,
+  isFavourite,
   pendingFavouriteId,
   onFavouriteChange,
   pendingRatingId,
   onRatingChange,
+  canEditRating = false,
 }) {
   return (
     <table className="book-table">
@@ -80,10 +86,12 @@ export default function BooksTable({
           <BookRow
             key={book.id}
             book={book}
+            isFavourite={isFavourite(book.id)}
             isFavouritePending={pendingFavouriteId === String(book.id)}
             onFavouriteChange={onFavouriteChange}
             isRatingPending={pendingRatingId === String(book.id)}
             onRatingChange={onRatingChange}
+            canEditRating={canEditRating}
           />
         ))}
       </tbody>

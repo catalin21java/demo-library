@@ -58,6 +58,10 @@ export default function BookDetailCard({
   onDelete,
   isSaving,
   isDeleting,
+  canEdit = false,
+  isFavourite = false,
+  isFavouritePending = false,
+  onFavouriteChange,
 }) {
   function handleFieldChange(field, value) {
     onEditFormChange((current) => ({ ...current, [field]: value }));
@@ -90,19 +94,30 @@ export default function BookDetailCard({
           onChange={
             isEditing ? (nextRating) => handleFieldChange("rating", nextRating) : undefined
           }
-          disabled={Boolean(isSaving || isDeleting)}
+          disabled={Boolean(isSaving || isDeleting) || !isEditing}
         />
       </div>
+      <label className="favourite-detail">
+        Favourite
+        <input
+          type="checkbox"
+          checked={isFavourite}
+          disabled={isFavouritePending}
+          onChange={(event) => onFavouriteChange?.(event.target.checked)}
+        />
+      </label>
       <p className="meta">Created: {new Date(book.createdAt).toLocaleString()}</p>
-      <BookDetailActions
-        isEditing={isEditing}
-        isSaving={isSaving}
-        isDeleting={isDeleting}
-        onStartEditing={onStartEditing}
-        onCancelEditing={onCancelEditing}
-        onSave={onSave}
-        onDelete={onDelete}
-      />
+      {canEdit ? (
+        <BookDetailActions
+          isEditing={isEditing}
+          isSaving={isSaving}
+          isDeleting={isDeleting}
+          onStartEditing={onStartEditing}
+          onCancelEditing={onCancelEditing}
+          onSave={onSave}
+          onDelete={onDelete}
+        />
+      ) : null}
     </section>
   );
 }
