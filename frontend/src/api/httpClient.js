@@ -18,7 +18,7 @@ function resolveToken() {
 
 export function getStoredAuth() {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) {
       return null;
     }
@@ -30,10 +30,12 @@ export function getStoredAuth() {
 
 export function setStoredAuth(auth) {
   if (!auth) {
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
     localStorage.removeItem(AUTH_STORAGE_KEY);
     return;
   }
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
 export async function readApiErrorMessage(response, fallbackMessage) {
