@@ -63,6 +63,11 @@ export default function LoginPage() {
       <p>
         No account? <Link to="/signup">Sign up</Link>
       </p>
+      <p className="auth-page-nav">
+        <Link to="/" className="btn-secondary">
+          Browse books
+        </Link>
+      </p>
     </main>
   );
 }

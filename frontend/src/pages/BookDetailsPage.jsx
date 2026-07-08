@@ -21,7 +21,7 @@ function buildEditForm(book) {
 export default function BookDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAuthenticated } = useAuth();
   const { books, bookById, bookStatesById, loadBookById, updateBook, removeBook } =
     useBooksCache();
   const {
@@ -120,6 +120,8 @@ export default function BookDetailsPage() {
     favouriteError ||
     (notFound ? "" : bookState.error || "");
 
+  const backTo = isAuthenticated ? "/books" : "/";
+
   if (loading) {
     return (
       <main className="app">
@@ -135,7 +137,7 @@ export default function BookDetailsPage() {
         <AppHeader />
         <h1>Book not found</h1>
         <p>This page is no longer available.</p>
-        <Link to="/books">Back to books</Link>
+        <Link to={backTo}>Back to books</Link>
       </main>
     );
   }
@@ -146,7 +148,7 @@ export default function BookDetailsPage() {
         <AppHeader />
         <h1>Book details</h1>
         <p>{error || "Unable to load book right now."}</p>
-        <Link to="/books">Back to books</Link>
+        <Link to={backTo}>Back to books</Link>
       </main>
     );
   }
@@ -156,7 +158,7 @@ export default function BookDetailsPage() {
       <AppHeader />
       <h1>Book details</h1>
       <p>
-        <Link to="/books">Back to books</Link>
+        <Link to={backTo}>Back to books</Link>
       </p>
       {error ? <p className="error">{error}</p> : null}
       {bookState.isRefreshing && !loading ? <p>Refreshing book...</p> : null}
@@ -172,9 +174,9 @@ export default function BookDetailsPage() {
         isSaving={isSaving}
         isDeleting={isDeleting}
         canEdit={isAdmin}
-        isFavourite={isFavourite(book.id)}
-        isFavouritePending={pendingFavouriteId === String(book.id)}
-        onFavouriteChange={handleFavouriteChange}
+        isFavourite={isAuthenticated ? isFavourite(book.id) : false}
+        isFavouritePending={isAuthenticated && pendingFavouriteId === String(book.id)}
+        onFavouriteChange={isAuthenticated ? handleFavouriteChange : undefined}
       />
     </main>
   );

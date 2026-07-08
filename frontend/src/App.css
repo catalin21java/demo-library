@@ -353,6 +353,16 @@
   gap: 0.5rem;
 }
 
+.app-header-brand {
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-header-brand:hover {
+  color: #2563eb;
+}
+
 .app-header-user {
   font-weight: 600;
 }
@@ -399,6 +409,10 @@
 
 .auth-page {
   max-width: 420px;
+}
+
+.auth-page-nav {
+  margin-top: 1rem;
 }
 
 .auth-form {

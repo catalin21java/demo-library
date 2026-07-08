@@ -17,6 +17,7 @@ function BookRow({
   isRatingPending,
   onRatingChange,
   canEditRating,
+  showFavourites,
 }) {
   return (
     <tr>
@@ -32,17 +33,19 @@ function BookRow({
           disabled={isRatingPending || !canEditRating}
         />
       </td>
-      <td className="td-favourite">
-        <label className="favourite-checkbox-label">
-          <input
-            type="checkbox"
-            checked={isFavourite}
-            disabled={isFavouritePending}
-            onChange={(event) => onFavouriteChange(book, event.target.checked)}
-            aria-label={`Favourite: ${book.title}`}
-          />
-        </label>
-      </td>
+      {showFavourites ? (
+        <td className="td-favourite">
+          <label className="favourite-checkbox-label">
+            <input
+              type="checkbox"
+              checked={isFavourite}
+              disabled={isFavouritePending}
+              onChange={(event) => onFavouriteChange(book, event.target.checked)}
+              aria-label={`Favourite: ${book.title}`}
+            />
+          </label>
+        </td>
+      ) : null}
       <td className="actions">
         <Link to={`/books/${book.id}`} className="link-button">
           View
@@ -62,6 +65,7 @@ export default function BooksTable({
   pendingRatingId,
   onRatingChange,
   canEditRating = false,
+  showFavourites = true,
 }) {
   return (
     <table className="book-table">
@@ -77,7 +81,7 @@ export default function BooksTable({
             />
           ))}
           <th className="th-rating">Rating</th>
-          <th className="th-favourite">Favourite</th>
+          {showFavourites ? <th className="th-favourite">Favourite</th> : null}
           <th className="th-actions">Actions</th>
         </tr>
       </thead>
@@ -92,6 +96,7 @@ export default function BooksTable({
             isRatingPending={pendingRatingId === String(book.id)}
             onRatingChange={onRatingChange}
             canEditRating={canEditRating}
+            showFavourites={showFavourites}
           />
         ))}
       </tbody>

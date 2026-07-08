@@ -97,15 +97,17 @@ export default function BookDetailCard({
           disabled={Boolean(isSaving || isDeleting) || !isEditing}
         />
       </div>
+      {onFavouriteChange ? (
       <label className="favourite-detail">
         Favourite
         <input
           type="checkbox"
           checked={isFavourite}
           disabled={isFavouritePending}
-          onChange={(event) => onFavouriteChange?.(event.target.checked)}
+          onChange={(event) => onFavouriteChange(event.target.checked)}
         />
       </label>
+      ) : null}
       <p className="meta">Created: {new Date(book.createdAt).toLocaleString()}</p>
       {canEdit ? (
         <BookDetailActions

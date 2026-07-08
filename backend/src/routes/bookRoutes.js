@@ -4,10 +4,11 @@ import { authenticate, requireAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.use(authenticate);
-
 router.get("/", bookController.getBooks);
 router.get("/:id", bookController.getBook);
+
+router.use(authenticate);
+
 router.post("/", requireAdmin, bookController.createBook);
 router.patch("/:id", requireAdmin, bookController.patchBook);
 router.delete("/:id", requireAdmin, bookController.deleteBook);

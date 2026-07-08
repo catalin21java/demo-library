@@ -10,24 +10,27 @@ export default function BooksToolbar({
   onSearchChange,
   minRating,
   onMinRatingChange,
+  showScopeToggle = true,
 }) {
   return (
     <div className="list-toolbar">
-      <div className="list-scope-toggle" role="group" aria-label="Which books to show">
-        {SCOPES.map((scope) => {
-          const isActive = listScope === scope.id;
-          return (
-            <button
-              key={scope.id}
-              type="button"
-              className={`scope-btn${isActive ? " scope-btn-active" : ""}`}
-              onClick={() => onScopeChange(scope.id)}
-            >
-              {scope.label}
-            </button>
-          );
-        })}
-      </div>
+      {showScopeToggle ? (
+        <div className="list-scope-toggle" role="group" aria-label="Which books to show">
+          {SCOPES.map((scope) => {
+            const isActive = listScope === scope.id;
+            return (
+              <button
+                key={scope.id}
+                type="button"
+                className={`scope-btn${isActive ? " scope-btn-active" : ""}`}
+                onClick={() => onScopeChange(scope.id)}
+              >
+                {scope.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       <div className="list-search">
         <input
           type="search"
